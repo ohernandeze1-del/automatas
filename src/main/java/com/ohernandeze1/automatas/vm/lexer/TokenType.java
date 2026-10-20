@@ -1,0 +1,6 @@
+package com.ohernandeze1.automatas.vm.lexer;
+
+public enum TokenType {
+    PRODUCTO, CARGAR, MONEDA, SELECCIONAR, COMPRAR, CANCELAR, MOSTRAR,
+    IDENTIFIER, NUMBER, LPAREN, RPAREN, COMMA, SEMICOLON, EOF, UNKNOWN
+}
