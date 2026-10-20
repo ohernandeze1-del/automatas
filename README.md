@@ -98,11 +98,13 @@ La interfaz muestra:
 - Selección, comprar, cancelar y mostrar
 - Estado y última transición del autómata
 - Retroalimentación de dispensado/cambio/reembolso
-- Editor `.vm` con abrir/guardar/ejecutar
+- Editor `.vm` con abrir/guardar/analizar/ejecutar (con filtro `.vm`)
 - Tabla de tokens
 - Errores léxicos/sintácticos/semánticos con número de línea
-- Traza de ejecución secuencial
+- Traza de ejecución secuencial (ejecuta instrucciones válidas aunque existan errores en otras líneas)
 - Importación/exportación JSON
+- Botón de reinicio de máquina
+- Panel visible de último producto dispensado y último cambio/reembolso
 
 ## Ejemplos `.vm`
 
@@ -112,8 +114,8 @@ La interfaz muestra:
 
 ## JSON
 
-- **Exporta** inventario + saldo + selección actual
-- **Importa** inventario + estado operativo compatible
+- **Exporta** inventario + saldo + selección actual + estado del autómata
+- **Importa** inventario + estado operativo compatible con validación y mensajes de error
 
 ## Capturas (guía)
 
@@ -123,4 +125,3 @@ Agregar en esta sección imágenes de:
 2. Ejecución exitosa de script
 3. Error semántico/sintáctico resaltado
 4. Exportación/importación JSON
-

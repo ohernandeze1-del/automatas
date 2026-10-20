@@ -1,11 +1,13 @@
 package com.ohernandeze1.automatas.simulator;
 
+import com.ohernandeze1.automatas.automata.VendingState;
 import com.ohernandeze1.automatas.automata.VendingStateMachine;
 import com.ohernandeze1.automatas.model.Product;
 
 import java.util.Collection;
 import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 public class VendingMachine {
     private final Map<String, Product> inventory = new LinkedHashMap<>();
@@ -13,12 +15,16 @@ public class VendingMachine {
     private int balance;
     private String selectedCode;
     private boolean dispensedInSelection;
+    private String lastDispensedProduct = "Ninguno";
+    private int lastReturnedAmount;
 
     public Map<String, Product> getInventory() { return inventory; }
     public Collection<Product> products() { return inventory.values(); }
     public VendingStateMachine getStateMachine() { return stateMachine; }
     public int getBalance() { return balance; }
     public String getSelectedCode() { return selectedCode; }
+    public String getLastDispensedProduct() { return lastDispensedProduct; }
+    public int getLastReturnedAmount() { return lastReturnedAmount; }
 
     public SimulationResult addProduct(String code, String name, int price, int quantity) {
         if (inventory.containsKey(code)) return SimulationResult.fail("Código duplicado: " + code);
@@ -61,7 +67,10 @@ public class VendingMachine {
         Product product = inventory.get(selectedCode);
         if (product == null) return SimulationResult.fail("Producto desconocido: " + selectedCode);
         if (product.getStock() <= 0) return SimulationResult.fail("Producto agotado: " + selectedCode);
-        if (balance < product.getPrice()) return SimulationResult.fail("Saldo insuficiente");
+        if (balance < product.getPrice()) {
+            int missing = product.getPrice() - balance;
+            return SimulationResult.fail("Saldo insuficiente: precio Q" + product.getPrice() + ", saldo Q" + balance + ", faltan Q" + missing);
+        }
 
         stateMachine.onPurchaseStart();
         product.removeOne();
@@ -71,10 +80,12 @@ public class VendingMachine {
 
         int change = balance;
         balance = 0;
+        lastDispensedProduct = product.getCode() + " - " + product.getName();
+        lastReturnedAmount = change;
         selectedCode = null;
         stateMachine.onReturnMoney();
         stateMachine.reset();
-        return SimulationResult.ok("Producto dispensado", change);
+        return SimulationResult.ok("Producto dispensado: " + lastDispensedProduct + " | Ruta: E3->E4->E5->E0", change);
     }
 
     public SimulationResult cancel() {
@@ -82,17 +93,36 @@ public class VendingMachine {
         balance = 0;
         selectedCode = null;
         dispensedInSelection = false;
+        lastReturnedAmount = refund;
         stateMachine.onReturnMoney();
         stateMachine.reset();
         return SimulationResult.ok("Operación cancelada", refund);
     }
 
     public String showStatus() {
-        return "Saldo=" + balance + ", selección=" + (selectedCode == null ? "ninguna" : selectedCode) + ", estado=" + stateMachine.current();
+        String inventoryStatus = inventory.values().stream()
+                .map(p -> p.getCode() + "(" + p.getStock() + ")")
+                .collect(Collectors.joining(", "));
+        return "Saldo=Q" + balance + ", selección=" + (selectedCode == null ? "ninguna" : selectedCode)
+                + ", estado=" + stateMachine.current() + ", inventario=[" + inventoryStatus + "]";
     }
 
-    public void restoreState(int balance, String selectedCode) {
+    public void restoreState(int balance, String selectedCode, VendingState state) {
         this.balance = Math.max(balance, 0);
         this.selectedCode = selectedCode;
+        this.dispensedInSelection = false;
+        this.lastReturnedAmount = 0;
+        this.lastDispensedProduct = "Ninguno";
+        this.stateMachine.setCurrent(state);
+    }
+
+    public void resetMachine() {
+        inventory.clear();
+        balance = 0;
+        selectedCode = null;
+        dispensedInSelection = false;
+        lastDispensedProduct = "Ninguno";
+        lastReturnedAmount = 0;
+        stateMachine.reset();
     }
 }

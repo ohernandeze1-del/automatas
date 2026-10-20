@@ -43,63 +43,72 @@ public class Parser {
                     yield null;
                 }
             };
-        } catch (RuntimeException ex) {
+        } catch (ParseAbort ignored) {
             synchronize();
             return null;
         }
     }
 
     private Instruction parseProduct(int line) {
-        consume(TokenType.LPAREN, "Falta '(' en PRODUCTO");
-        String code = consume(TokenType.IDENTIFIER, "Falta código en PRODUCTO").lexeme();
-        consume(TokenType.COMMA, "Falta ',' después del código");
-        String name = consume(TokenType.IDENTIFIER, "Falta nombre en PRODUCTO").lexeme();
-        consume(TokenType.COMMA, "Falta ',' después del nombre");
-        int price = Integer.parseInt(consume(TokenType.NUMBER, "Falta precio en PRODUCTO").lexeme());
-        consume(TokenType.COMMA, "Falta ',' después del precio");
-        int quantity = Integer.parseInt(consume(TokenType.NUMBER, "Falta cantidad en PRODUCTO").lexeme());
-        consume(TokenType.RPAREN, "Falta ')' en PRODUCTO");
-        consume(TokenType.SEMICOLON, "Falta ';' al final de PRODUCTO");
+        consume(TokenType.LPAREN, "Falta '(' en PRODUCTO", line);
+        String code = consume(TokenType.IDENTIFIER, "Falta código en PRODUCTO", line).lexeme();
+        consume(TokenType.COMMA, "Falta ',' después del código", line);
+        String name = consume(TokenType.IDENTIFIER, "Falta nombre en PRODUCTO", line).lexeme();
+        consume(TokenType.COMMA, "Falta ',' después del nombre", line);
+        int price = parseInt(consume(TokenType.NUMBER, "Falta precio en PRODUCTO", line), "Número inválido en precio de PRODUCTO");
+        consume(TokenType.COMMA, "Falta ',' después del precio", line);
+        int quantity = parseInt(consume(TokenType.NUMBER, "Falta cantidad en PRODUCTO", line), "Número inválido en cantidad de PRODUCTO");
+        consume(TokenType.RPAREN, "Falta ')' en PRODUCTO", line);
+        consume(TokenType.SEMICOLON, "Falta ';' al final de PRODUCTO", line);
         return new ProductInstruction(code, name, price, quantity, line);
     }
 
     private Instruction parseLoad(int line) {
-        consume(TokenType.LPAREN, "Falta '(' en CARGAR");
-        String code = consume(TokenType.IDENTIFIER, "Falta código en CARGAR").lexeme();
-        consume(TokenType.COMMA, "Falta ',' en CARGAR");
-        int quantity = Integer.parseInt(consume(TokenType.NUMBER, "Falta cantidad en CARGAR").lexeme());
-        consume(TokenType.RPAREN, "Falta ')' en CARGAR");
-        consume(TokenType.SEMICOLON, "Falta ';' al final de CARGAR");
+        consume(TokenType.LPAREN, "Falta '(' en CARGAR", line);
+        String code = consume(TokenType.IDENTIFIER, "Falta código en CARGAR", line).lexeme();
+        consume(TokenType.COMMA, "Falta ',' en CARGAR", line);
+        int quantity = parseInt(consume(TokenType.NUMBER, "Falta cantidad en CARGAR", line), "Número inválido en cantidad de CARGAR");
+        consume(TokenType.RPAREN, "Falta ')' en CARGAR", line);
+        consume(TokenType.SEMICOLON, "Falta ';' al final de CARGAR", line);
         return new LoadInstruction(code, quantity, line);
     }
 
     private Instruction parseCoin(int line) {
-        consume(TokenType.LPAREN, "Falta '(' en MONEDA");
-        int value = Integer.parseInt(consume(TokenType.NUMBER, "Falta valor en MONEDA").lexeme());
-        consume(TokenType.RPAREN, "Falta ')' en MONEDA");
-        consume(TokenType.SEMICOLON, "Falta ';' al final de MONEDA");
+        consume(TokenType.LPAREN, "Falta '(' en MONEDA", line);
+        int value = parseInt(consume(TokenType.NUMBER, "Falta valor en MONEDA", line), "Número inválido en MONEDA");
+        consume(TokenType.RPAREN, "Falta ')' en MONEDA", line);
+        consume(TokenType.SEMICOLON, "Falta ';' al final de MONEDA", line);
         return new CoinInstruction(value, line);
     }
 
     private Instruction parseSelect(int line) {
-        consume(TokenType.LPAREN, "Falta '(' en SELECCIONAR");
-        String code = consume(TokenType.IDENTIFIER, "Falta código en SELECCIONAR").lexeme();
-        consume(TokenType.RPAREN, "Falta ')' en SELECCIONAR");
-        consume(TokenType.SEMICOLON, "Falta ';' al final de SELECCIONAR");
+        consume(TokenType.LPAREN, "Falta '(' en SELECCIONAR", line);
+        String code = consume(TokenType.IDENTIFIER, "Falta código en SELECCIONAR", line).lexeme();
+        consume(TokenType.RPAREN, "Falta ')' en SELECCIONAR", line);
+        consume(TokenType.SEMICOLON, "Falta ';' al final de SELECCIONAR", line);
         return new SelectInstruction(code, line);
     }
 
     private Instruction parseNoArg(int line, String name, NoArgFactory factory) {
-        consume(TokenType.LPAREN, "Falta '(' en " + name);
-        consume(TokenType.RPAREN, "Falta ')' en " + name);
-        consume(TokenType.SEMICOLON, "Falta ';' al final de " + name);
+        consume(TokenType.LPAREN, "Falta '(' en " + name, line);
+        consume(TokenType.RPAREN, "Falta ')' en " + name, line);
+        consume(TokenType.SEMICOLON, "Falta ';' al final de " + name, line);
         return factory.create(line);
     }
 
-    private Token consume(TokenType expected, String message) {
+    private int parseInt(Token token, String message) {
+        try {
+            return Integer.parseInt(token.lexeme());
+        } catch (NumberFormatException ex) {
+            error(token, message + ": " + token.lexeme());
+            throw new ParseAbort();
+        }
+    }
+
+    private Token consume(TokenType expected, String message, int instructionLine) {
         if (check(expected)) return advance();
-        error(peek(), message);
-        throw new RuntimeException(message);
+        error(instructionLine, peek().column(), message);
+        throw new ParseAbort();
     }
 
     private boolean check(TokenType type) {
@@ -123,6 +132,10 @@ public class Parser {
         errors.add("Línea " + token.line() + ", columna " + token.column() + ": " + message);
     }
 
+    private void error(int line, int column, String message) {
+        errors.add("Línea " + line + ", columna " + column + ": " + message);
+    }
+
     private void synchronize() {
         while (!isAtEnd()) {
             if (previous().type() == TokenType.SEMICOLON) return;
@@ -138,5 +151,8 @@ public class Parser {
     @FunctionalInterface
     private interface NoArgFactory {
         Instruction create(int line);
+    }
+
+    private static class ParseAbort extends RuntimeException {
     }
 }

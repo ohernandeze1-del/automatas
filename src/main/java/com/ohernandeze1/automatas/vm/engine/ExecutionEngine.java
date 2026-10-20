@@ -15,8 +15,10 @@ public class ExecutionEngine {
         for (Instruction instruction : instructions) {
             SimulationResult result = dispatch(machine, instruction);
             String instructionName = instruction.getClass().getSimpleName();
-            trace.add(new TraceEvent(instruction.line(), instructionName, result.message() + (result.returnedChange() > 0 ? " (cambio=" + result.returnedChange() + ")" : "")));
-            if (!result.success()) diagnostics.add("Línea " + instruction.line() + ": " + result.message());
+            String status = result.success() ? "[OK]" : "[ERROR SEMANTICO]";
+            trace.add(new TraceEvent(instruction.line(), instructionName,
+                    status + " " + result.message() + (result.returnedChange() > 0 ? " (cambio=Q" + result.returnedChange() + ")" : "")));
+            if (!result.success()) diagnostics.add("[ERROR SEMANTICO] Línea " + instruction.line() + ": " + result.message());
         }
         return new ExecutionResult(trace, diagnostics);
     }

@@ -16,6 +16,7 @@ class VendingMachineTest {
         var result = vm.purchase();
         assertTrue(result.success());
         assertEquals(5, result.returnedChange());
+        assertEquals("A1 - Agua", vm.getLastDispensedProduct());
     }
 
     @Test
@@ -36,5 +37,16 @@ class VendingMachineTest {
         assertTrue(vm.purchase().success());
         var second = vm.purchase();
         assertFalse(second.success());
+    }
+
+    @Test
+    void shouldReportInsufficientBalanceWithMissingAmount() {
+        VendingMachine vm = new VendingMachine();
+        vm.addProduct("A1", "Agua", 10, 1);
+        vm.insertCoin(5);
+        vm.selectProduct("A1");
+        var result = vm.purchase();
+        assertFalse(result.success());
+        assertTrue(result.message().contains("faltan Q5"));
     }
 }
